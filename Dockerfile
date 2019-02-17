@@ -68,10 +68,11 @@ RUN rsync -av --delete -rlptD --delete-excluded --progress --exclude pasture --e
 
 # setup initrd
 RUN cd /tmp/initrd \
-  && xzdec /tmp/iso/isolinux/initrd.img | cpio -idm
+  && xzdec /tmp/iso/isolinux/initrd.img | cpio -i -d -H newc --no-absolute-filenames
 
 # add build script
 COPY build_zfs.sh /build_zfs.sh
+COPY grub-zfs.cfg /grub.cfg
 RUN chmod +x /build_zfs.sh
 
 CMD [ "/bin/sh", "-c", "/build_zfs.sh" ]
