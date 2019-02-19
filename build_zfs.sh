@@ -24,13 +24,13 @@ installpkg /tmp/pkg/spl-solaris-${ZFS_VER}_${KERNEL_VER}-x86_64-1_SBo.tgz
 cd /tmp/src/zfs
 OUTPUT=/tmp/pkg sh ./zfs-on-linux.SlackBuild
 
-# add the contents of the SPL and ZFS packages to create initrd-zfs.gz
+# add the contents of the SPL and ZFS packages to create initrd.img.zfs
 cd /tmp/initrd
 installpkg --root /tmp/initrd /tmp/pkg/spl-solaris-${ZFS_VER}_${KERNEL_VER}-x86_64-1_SBo.tgz /tmp/pkg/zfs-on-linux-${ZFS_VER}_${KERNEL_VER}-x86_64-1_SBo.tgz
 depmod -b $(pwd) -a ${KERNEL_VER}
-# use GZip instead of XZ or the initrd can't be unpacked (CRC issues, don't remember)
-find . | cpio -o -H newc | gzip -9c > /tmp/iso/isolinux/initrd.img
+find . | cpio -o -H newc | xz -z --check=crc32 -T0 > /tmp/iso/isolinux/initrd.img.zfs
 
+# add SPL and ZFS packages to installer as well, include them in "a" tagfile
 cp /tmp/pkg/*.tgz /tmp/iso/slackware64/a/
 echo "zfs-on-linux:REC" >> /tmp/iso/slackware64/a/tagfile
 echo "spl-solaris:REC" >> /tmp/iso/slackware64/a/tagfile
@@ -38,6 +38,9 @@ sort -o /tmp/iso/slackware64/a/tagfile /tmp/iso/slackware64/a/tagfile
 sed -i '/^"xz"/a "zfs-on-linux" "ZFS is a modern filesystem - REQUIRED" "on" \' /tmp/iso/slackware64/a/maketag
 sed -i '/^"smartmontools"/a "spl-solaris" "Solaris Porting Layer (SPL) - REQUIRED" "on" \' /tmp/iso/slackware64/a/maketag
 cp /tmp/iso/slackware64/a/maketag /tmp/iso/slackware64/a/maketag.ez
+
+# copy modified GRUB config
+cp /grub.cfg /tmp/iso/EFI/BOOT/grub.cfg
 
 cat << EOF
 Slackware64-current installer with ZFS v${ZFS_VER} on Linux v${KERNEL_VER} built.
