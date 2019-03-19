@@ -1,0 +1,26 @@
+--- /boot/initrd-tree/init	2019-03-03 23:02:39.000000000 +0100
++++ init.zfs	2019-03-19 14:10:11.596989377 +0100
+@@ -188,6 +188,11 @@
+     fi
+   fi
+ 
++  if [ "${ROOTFS}" == "zfs" ]; then
++    /sbin/zpool import -N -d /dev/disk/by-id ${ROOTDEV%%/*}
++    mount -t zfs -o zfsutil ${ROOTDEV} /mnt
++  fi
++
+   # Unlock any encrypted partitions necessary to access the
+   # root filesystem, such as encrypted LVM Physical volumes, disk
+   # partitions or mdadm arrays.
+@@ -318,7 +323,9 @@
+   # Switch to real root partition:
+   /sbin/udevadm settle --timeout=10
+   echo 0x0100 > /proc/sys/kernel/real-root-dev
+-  mount -o ro${ROOTFLAGS:+,$ROOTFLAGS} -t $ROOTFS $ROOTDEV /mnt
++  if [ "${ROOTFS}" != "zfs" ]; then
++    mount -o ro${ROOTFLAGS:+,$ROOTFLAGS} -t $ROOTFS $ROOTDEV /mnt
++  fi
+   
+   if [ ! -r /mnt/sbin/init ]; then
+     echo "ERROR:  No /sbin/init found on rootdev (or not mounted).  Trouble ahead."
+
