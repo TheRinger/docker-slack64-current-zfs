@@ -15,7 +15,7 @@ RUN sed -i -e 's#^BATCH=off#BATCH=on#' \
   && mkdir -p /var/lib/slackpkg \
   && touch /var/lib/slackpkg/current \
 # create all dirs we're going to use
-  && mkdir -p /tmp/{src/{spl,zfs},pkg,initrd,iso}
+  && mkdir -p /tmp/{src/{spl,zfs},pkg,initrd,iso/zfs}
 
 # install packages required for building ZFS and SPL packages
 RUN slackpkg update \
@@ -83,5 +83,10 @@ RUN cd /tmp/initrd \
 COPY files/container/build_zfs.sh /build_zfs.sh
 COPY files/container/grub-zfs.cfg /grub.cfg
 RUN chmod +x /build_zfs.sh
+
+# add installer files
+COPY files/installer/INSTALL /tmp/iso/zfs/INSTALL
+COPY files/installer/init.zfs.patch /tmp/iso/zfs/init.zfs.patch
+COPY files/installer/rc.S.zfs.patch /tmp/iso/zfs/rc.S.zfs.patch
 
 CMD [ "/bin/sh", "-c", "/build_zfs.sh" ]

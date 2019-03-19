@@ -57,4 +57,22 @@ rsync -rv --progress /var/lib/docker/volumes/slack64_zfs/_data/iso/ /mnt/usb
 
 # Install Slack64-current on ZFS
 
-The installer will have ZFS support and install the ZFS and SPL packages. *You* will have to create the ZFS storage pools and modify several startup and shutdown scripts yourself to get Slackware up and running. See the (rather dated) [ZFS root guide on SlackWiki](https://www.slackwiki.com/ZFS_root) for more info.
+The installer will have ZFS support and install the ZFS and SPL packages. *You* will have to create the ZFS storage pools and modify several startup and shutdown scripts yourself to get Slackware up and running.
+
+Follow the steps in `files/installer/INSTALL`. This file will also be included in the installer in `/zfs/INSTALL`.
+
+# One liners
+
+## Build everything for latest versions
+
+```
+_KERNELVER="$(wget -qO- https://ftp.nluug.nl/pub/os/Linux/distr/slackware/slackware64-current/kernels/VERSIONS.TXT | grep kernels | sed -e 's#^These kernels are version \(.*\)\.$#\1#')"
+_ZFSVER="$(wget -qO- https://slackbuilds.org/repository/14.2/system/zfs-on-linux/ | grep 'zfs-on-linux.*</h2>' | sed -e 's#.*(\(.*\)).*#\1#')"
+if [ -n "${_KERNELVER}" -a -n "${_ZFSVER}" ]
+then
+  docker build -t slack64_zfs:${_KERNELVER}_${_ZFSVER} . && \
+  docker volume create slack64_zfs && \
+  docker run --rm --volume slack64_zfs:/tmp --name slack64_zfs --env ZFS_VER=${_ZFSVER} --env KERNEL_VER=${_KERNELVER} slack64_zfs:${_KERNELVER}_${_ZFSVER} && \
+  docker volume inspect --format '{{ .Mountpoint }}' slack64_zfs
+fi
+```
