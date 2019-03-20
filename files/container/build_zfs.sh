@@ -52,11 +52,11 @@ and create a single GPT FAT32 partition on it. Then copy the contents of
 /var/lib/docker/volumes/slack64_zfs/_data/iso to the stick.
 
 USB_DEV="/dev/changeMeToTheCorrectDeviceName" # change this
-sgdisk -Z \${USB_DEV}
-sgdisk -og \${USB_DEV}
-sgdisk -N 1 -c 1:"SLACK64" -t 1:ef00 -A 1:set:2 \${USB_DEV}
-mkfs.vfat -F32 -n SLACK64 \${USB_DEV}1
+sgdisk -Z \${USB_DEV} && \
+sgdisk -og \${USB_DEV} && \
+sgdisk -N 1 -c 1:"SLACK64" -t 1:ef00 -A 1:set:2 \${USB_DEV} && \
+mkfs.vfat -F32 -n SLACK64 \${USB_DEV}1 && \
 
-mount \${USB_DEV}1 /mnt/usb
+mount \${USB_DEV}1 /mnt/usb && \
 rsync -rv --progress /var/lib/docker/volumes/slack64_zfs/_data/iso/ /mnt/usb
 EOF

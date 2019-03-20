@@ -15,12 +15,15 @@ RUN sed -i -e 's#^BATCH=off#BATCH=on#' \
   && mkdir -p /var/lib/slackpkg \
   && touch /var/lib/slackpkg/current \
 # create all dirs we're going to use
-  && mkdir -p /tmp/{src/{spl,zfs},pkg,initrd,iso}
+  && mkdir -p /tmp/{src/{spl,zfs},pkg,initrd,iso/zfs}
 
 # install packages required for building ZFS and SPL packages
 RUN slackpkg update \
   && slackpkg upgrade slackpkg \
   && slackpkg update \
+  # install dependency of new version of wget first
+  && slackpkg install libpsl pcre2 \
+  && slackpkg upgrade-all \
   && slackpkg install \
      autoconf \
      automake \
@@ -31,6 +34,7 @@ RUN slackpkg update \
      cdrtools \
      cmake \
      cpio \
+     dcron \
      dev86 \
      doxygen \
      elfutils \
@@ -48,12 +52,15 @@ RUN slackpkg update \
      kmod \
      libffi \
      libmpc \
+     libpsl \
      libtool \
      llvm \
      m4 \
      make \
      mkinitrd \
      patchelf \
+     pcre \
+     pcre2 \
      perl \
      pkg-config \
      rsync \
@@ -63,6 +70,8 @@ RUN slackpkg update \
      xz \
      zlib
 
+RUN /usr/sbin/update-ca-certificates --fresh
+
 # mirror slack64 packages and setup initrd
 RUN rsync -av --delete -rlptD --delete-excluded --progress --exclude pasture --exclude testing --exclude source --exclude extra/source ${RSYNC_MIRROR} /tmp/iso
 
@@ -71,8 +80,13 @@ RUN cd /tmp/initrd \
   && xzdec /tmp/iso/isolinux/initrd.img | cpio -i -d -H newc --no-absolute-filenames
 
 # add build script
-COPY build_zfs.sh /build_zfs.sh
-COPY grub-zfs.cfg /grub.cfg
+COPY files/container/build_zfs.sh /build_zfs.sh
+COPY files/container/grub-zfs.cfg /grub.cfg
 RUN chmod +x /build_zfs.sh
+
+# add installer files
+COPY files/installer/INSTALL /tmp/iso/zfs/INSTALL
+COPY files/installer/init.zfs.patch /tmp/iso/zfs/init.zfs.patch
+COPY files/installer/rc.S.zfs.patch /tmp/iso/zfs/rc.S.zfs.patch
 
 CMD [ "/bin/sh", "-c", "/build_zfs.sh" ]
