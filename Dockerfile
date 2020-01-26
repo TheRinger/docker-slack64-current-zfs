@@ -15,7 +15,7 @@ RUN sed -i -e 's#^BATCH=off#BATCH=on#' \
   && mkdir -p /var/lib/slackpkg \
   && touch /var/lib/slackpkg/current \
 # create all dirs we're going to use
-  && mkdir -p /tmp/{src/{spl,zfs},pkg,initrd,iso/zfs}
+  && mkdir -p /tmp/{src/zfs,pkg,initrd,iso/zfs}
 
 # install packages required for building ZFS and SPL packages
 RUN slackpkg update \
