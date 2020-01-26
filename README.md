@@ -5,7 +5,7 @@ Create a Slackware64-current installer with ZFS support and ZFS and SPL packages
 ## `git clone` this repo
 
 ```
-git clone https://github.com/tterpelle/docker-slack64-current-zfs.git
+git clone https://github.com/TheRinger/docker-slack64-current-zfs.git
 cd docker-slack64-current-zfs
 ```
 
