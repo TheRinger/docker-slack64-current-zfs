@@ -3,40 +3,31 @@ set -o
 set -x
 
 RSYNC_MIRROR="ftp.nluug.nl::slackware/slackware64-current/"
-SPL_SBO="https://slackbuilds.org/slackbuilds/14.2/system/spl-solaris.tar.gz"
 ZFS_SBO="https://slackbuilds.org/slackbuilds/14.2/system/zfs-on-linux.tar.gz"
 ZFS_URL="https://github.com/zfsonlinux/zfs/releases/download/"
 
 # download and extract SBo files for SPL and ZFS
-wget -nv -O /tmp/src/spl.tar.gz ${SPL_SBO}
 wget -nv -O /tmp/src/zfs.tar.gz ${ZFS_SBO}
-tar xzf /tmp/src/spl.tar.gz --strip-components=1 -C /tmp/src/spl
 tar xzf /tmp/src/zfs.tar.gz --strip-components=1 -C /tmp/src/zfs
-wget -nv -O /tmp/src/spl/spl-${ZFS_VER}.tar.gz ${ZFS_URL}/zfs-${ZFS_VER}/spl-${ZFS_VER}.tar.gz
 wget -nv -O /tmp/src/zfs/zfs-${ZFS_VER}.tar.gz ${ZFS_URL}/zfs-${ZFS_VER}/zfs-${ZFS_VER}.tar.gz
 
-# build and install SPL and ZFS packages
+# build and install ZFS packages
 export KERN="${KERNEL_VER}"
 export MAKEFLAGS="-j$(nproc)"
-cd /tmp/src/spl
-OUTPUT=/tmp/pkg sh ./spl-solaris.SlackBuild
-installpkg /tmp/pkg/spl-solaris-${ZFS_VER}_${KERNEL_VER}-x86_64-1_SBo.tgz
 cd /tmp/src/zfs
 OUTPUT=/tmp/pkg sh ./zfs-on-linux.SlackBuild
 
-# add the contents of the SPL and ZFS packages to create initrd.img.zfs
+# add the contents of ZFS packages to create initrd.img.zfs
 cd /tmp/initrd
-installpkg --root /tmp/initrd /tmp/pkg/spl-solaris-${ZFS_VER}_${KERNEL_VER}-x86_64-1_SBo.tgz /tmp/pkg/zfs-on-linux-${ZFS_VER}_${KERNEL_VER}-x86_64-1_SBo.tgz
+installpkg --root /tmp/initrd /tmp/pkg/zfs-on-linux-${ZFS_VER}_${KERNEL_VER}-x86_64-1_SBo.tgz
 depmod -b $(pwd) -a ${KERNEL_VER}
 find . | cpio -o -H newc | xz -z --check=crc32 -T0 > /tmp/iso/isolinux/initrd.img.zfs
 
-# add SPL and ZFS packages to installer as well, include them in "a" tagfile
+# add ZFS packages to installer as well, include them in "a" tagfile
 cp /tmp/pkg/*.tgz /tmp/iso/slackware64/a/
 echo "zfs-on-linux:REC" >> /tmp/iso/slackware64/a/tagfile
-echo "spl-solaris:REC" >> /tmp/iso/slackware64/a/tagfile
 sort -o /tmp/iso/slackware64/a/tagfile /tmp/iso/slackware64/a/tagfile
 sed -i '/^"xz"/a "zfs-on-linux" "ZFS is a modern filesystem - REQUIRED" "on" \' /tmp/iso/slackware64/a/maketag
-sed -i '/^"smartmontools"/a "spl-solaris" "Solaris Porting Layer (SPL) - REQUIRED" "on" \' /tmp/iso/slackware64/a/maketag
 cp /tmp/iso/slackware64/a/maketag /tmp/iso/slackware64/a/maketag.ez
 
 # copy modified GRUB config
