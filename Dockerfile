@@ -1,6 +1,6 @@
 FROM vbatts/slackware:current
 
-ENV RSYNC_MIRROR ftp.nluug.nl::slackware/slackware64-current/
+ENV RSYNC_MIRROR 10.0.0.33::slackware/slackware64-current/
 
 # configure slackpkg to be non-interactive
 RUN sed -i -e 's#^BATCH=off#BATCH=on#' \
@@ -17,7 +17,7 @@ RUN sed -i -e 's#^BATCH=off#BATCH=on#' \
 # create all dirs we're going to use
   && mkdir -p /tmp/{src/zfs,pkg,initrd,iso/zfs}
 
-# install packages required for building ZFS and SPL packages
+# install packages required for building ZFS package
 RUN slackpkg update \
   && slackpkg upgrade slackpkg \
   && slackpkg update \
