@@ -1,9 +1,7 @@
 # How to install slackware64-current on a ZFS root
-
 # PREREQUISITES
-# - EFI machine
 # - a disk that can be wiped fully
-# - USB-stick created with https://github.com/tterpelle/docker-slack64-current-zfs
+# - USB-stick created with https://github.com/TheRinger/docker-slack64-current-zfs
 # - you've read and understood https://github.com/zfsonlinux/zfs/wiki/Debian-Stretch-Root-on-ZFS
 #
 # Note1: only create a mountpoint for your / dataset, create the other datasets as 'legacy':
@@ -11,30 +9,32 @@
 #
 # Note2: create a swap partition if you want to be able to hibernate (pm-hibernate) your system.
 # It should be at least the size of your RAM.
-
 # You've booted the USB-stick and are now in the Slackware64-current installer shell.
 # Press ALT+F2 to open a terminal on tty2, for some reason it will not open on tty1.
 
-# Here we go!
-
 # Empty /mnt because ZFS (by default) refuses to mount over non-empty directories
-rm /mnt/README
+rm -f /mnt/README
 
 # Search for your target disk in /dev/disk/by-id and save it in variable
-export TARGET="/dev/disk/by-id/scsi-SATA_disk1"
+TRYTHIS=$(ls /dev/disk/by-id|grep KINGSTON|head -n1)
+export TARGET="/dev/disk/by-id/${TRYTHIS}"
 
 # Choose a name for your ZFS pool and save it in a variable
-export ZPOOL=rpool
+export ZPOOL=zlan
 
 # WIPE ALL THE THINGS on your target disk
 mdadm --zero-superblock --force ${TARGET}
 sgdisk --zap-all ${TARGET}
 zpool labelclear -f ${TARGET}
+# decide on swap amount
+SWAP_AMOUNT="5000"
+BOOT_AMOUNT="1000"
 
-# Create EFI, swap and ZFS partitions
-sgdisk     -n2:1M:+100M  -t2:EF00 ${TARGET}
-sgdisk     -n3:0:$(free -m | grep Mem | awk '{ print $3 }')M       -t3:8200 ${TARGET}
-sgdisk     -n4:0:0       -t4:BF01 ${TARGET}
+# Create Linux FS, swap and ZFS partitions
+sgdisk -a1 -n1:34:2047                                -t1:EF02 ${TARGET}
+sgdisk     -n2:0:${BOOT_AMOUNT}M                      -t2:8100 ${TARGET}
+sgdisk     -n3:0:${SWAP_AMOUNT}M                      -t3:8200 ${TARGET}
+sgdisk     -n4:0:0                                    -t4:BF01 ${TARGET}
 
 # Create ZPOOL
 zpool create -o ashift=12 -d \
@@ -54,29 +54,41 @@ zpool create -o ashift=12 -d \
       -O mountpoint=/ -R /mnt \
       ${ZPOOL} ${TARGET}-part4
 
-# Create datasets, see "Debian Stretch Root on ZFS" for more info
-zfs create -o canmount=off -o mountpoint=none ${ZPOOL}/ROOT
-zfs create -o canmount=noauto -o mountpoint=/ ${ZPOOL}/ROOT/linux
-zfs create mountpoint=legacy ${ZPOOL}/ROOT/home
-zfs create mountpoint=legacy ${ZPOOL}/ROOT/opt
-zfs create mountpoint=legacy ${ZPOOL}/ROOT/tmp
-zfs create mountpoint=none ${ZPOOL}/ROOT/var
-zfs create mountpoint=legacy ${ZPOOL}/ROOT/var/tmp
-zfs create mountpoint=legacy ${ZPOOL}/ROOT/var/log
-# ...
+zfs create -o canmount=off -o mountpoint=none         ${ZPOOL}/ROOT
+zfs create -o canmount=noauto -o mountpoint=/         ${ZPOOL}/ROOT/slackware
+zfs create -o mountpoint=legacy -o setuid=off         ${ZPOOL}/ROOT/home
+zfs create -o mountpoint=/root                        ${ZPOOL}/ROOT/home/root
+zfs create -o mountpoint=legacy                       ${ZPOOL}/ROOT/opt
+zfs create -o mountpoint=legacy          -o exec=on   ${ZPOOL}/ROOT/tmp
+zfs create -o canmount=off -o setuid=off -o exec=off  ${ZPOOL}/ROOT/var
+zfs create -o mountpoint=legacy \
+           -o com.sun:auto-snapshot=false \
+           -o exec=on                                 ${ZPOOL}/ROOT/var/tmp
+zfs create -o mountpoint=legacy                       ${ZPOOL}/ROOT/var/log
+zfs create -o com.sun:auto-snapshot=false             ${ZPOOL}/ROOT/var/cache
+zfs create                                            ${ZPOOL}/ROOT/var/spool
+zfs create                                            ${ZPOOL}/ROOT/var/games
+zfs create                                            ${ZPOOL}/ROOT/var/mail
 
-# Mount the datasets
-zfs mount ${ZPOOL}/ROOT/linux
-for dir in tmp home var/log var/tmp opt
+#zfs create -o com.sun:auto-snapshot=false -o mountpoint=/var/lib/nfs        ${ZPOOL}/ROOT/var/nfs
+
+
+
+zfs mount ${ZPOOL}/ROOT/slackware
+for dir in tmp home var/log var/tmp var/cache var/spool var/games var/mail opt
 do
   mkdir -pv /mnt/${dir}
-  mount -t zfs ${ZPOOL}/${dir} /mnt/${dir}
+  mount -t zfs ${ZPOOL}/ROOT/${dir} /mnt/${dir}
 done
 
-# Format and mount EFI partition
-mkdir -pv /mnt/boot/efi
-mkfs.vfat -F32 ${TARGET}-part2
-mount ${TARGET}-part2 /mnt/boot/efi
+mkdir -pv /mnt/boot
+mkfs.ext2 ${TARGET}-part2
+mount ${TARGET}-part2 /mnt/boot
+
+
+chmod 1777 /mnt/tmp
+chmod 1777 /mnt/var/tmp
+zfs set devices=off ${ZPOOL}
 
 # Format swap partition
 mkswap ${TARGET}-part3
@@ -85,18 +97,46 @@ mkswap ${TARGET}-part3
 # we still have to make the system bootable
 setup
 
-# Install ZFS and SPL packages in /boot/initrd-tree so be included in initrd
+# Install ZFS package in /boot/initrd-tree so be included in initrd
 # TODO: optimize this step, the initrd doesn't need the entire content of
 #       the packages.
-installpkg --root /mnt/boot/initrd-tree \
-  /usb-stick/slackware64/a/zfs-on-linux-* \
-  /usb-stick/slackware64/a/spl-solaris-*
+installpkg --root /mnt/boot/initrd-tree /usb-stick/slackware64/a/zfs-on-linux-*
+
+export ZPOOL_VDEV_NAME_PATH=YES
 
 # Copy patches to new system
 cp /usb-stick/zfs/*.patch /mnt/tmp
 
 # Chroot into fresh system
+mount --rbind /dev  /mnt/dev
+mount --rbind /proc /mnt/proc
+mount --rbind /sys  /mnt/sys
 chroot /mnt /bin/bash
+
+
+#locale-gen en_US.UTF-8
+#echo LANG=en_US.UTF-8 > /etc/default/locale
+
+
+KERN=$(ls /lib/modules|head -n1)
+
+cat <<EOF > /etc/lilo.conf
+boot = ${TARGET}
+compact
+bitmap = /boot/slack.bmp
+bmp-colors = 255,0,255,0,255,0
+bmp-table = 60,6,1,16
+bmp-timer = 65,27,0,255
+append="ipv6.disable=1"
+prompt
+timeout = 300
+vga = normal
+image = /boot/vmlinuz
+root = ${TARGET}-part4
+label = linux-${KERN}
+initrd = /boot/initrd.gz
+read-only
+EOF
 
 # Create mkinitrd.conf
 cat <<EOF > /etc/mkinitrd.conf
@@ -105,9 +145,9 @@ CLEAR_TREE="0"
 OUTPUT_IMAGE="/boot/initrd.gz"
 KERNEL_VERSION="\$(uname -r)"
 KEYMAP="us"
-MODULE_LIST="zfs"
-RESUMEDEV="UUID=$(blkid -t TYPE=swap -s UUID -o value)"
-ROOTDEV="${ZPOOL}/ROOT/linux"
+MODULE_LIST="e1000:usb-storage:xhci-hcd:ehci-hcd:ehci-pci:xhci-pci:ohci-pci:uhci-hcd:hid:usbhid:i2c-hid:hid_generic:hid-logitech:mbcache:ext4:zfs"
+#RESUMEDEV="UUID=$(blkid -t TYPE=swap -s UUID -o value)"
+ROOTDEV="${TARGET}-part4"
 ROOTFS="zfs"
 UDEV="1"
 EOF
@@ -119,18 +159,41 @@ cp /usr/lib64/libgcc_s.so* /boot/initrd-tree/usr/lib64
 patch /boot/initrd-tree/init < /tmp/init.zfs.patch
 patch /etc/rc.d/rc.S < /tmp/rc.S.zfs.patch
 
-# Create initrd
-mkinitrd -F /etc/mkinitrd.conf
 
-# Install GRUB
-export ZPOOL_VDEV_NAME_PATH=YES
-grub-install ${TARGET}
-grub-mkconfig -o /boot/grub/grub.cfg
 
 # Create /etc/fstab
 cat /etc/mtab >> /etc/fstab
-vi /etc/fstab
+zfs set mountpoint=legacy ${ZPOOL}/ROOT/var/log
+zfs set mountpoint=legacy ${ZPOOL}/ROOT/var/tmp
+zfs set mountpoint=legacy ${ZPOOL}/ROOT/tmp
+zfs set mountpoint=legacy ${ZPOOL}/ROOT/opt
+zfs set mountpoint=legacy ${ZPOOL}/ROOT/var/cache
+zfs set mountpoint=legacy ${ZPOOL}/ROOT/home
 
+
+cat >> /etc/fstab << EOF
+${ZPOOL}/ROOT	      /	      zfs	defaults,noatime,nofail,noacl,suid,xattr,nomand,zfsutil	0	0
+${ZPOOL}/ROOT/home	/home		zfs	defaults,zfsutil	0	0
+${ZPOOL}/ROOT/opt	      /opt	      zfs	defaults,zfsutil	0	0
+${ZPOOL}/ROOT/var/log	/var/log	zfs	defaults,zfsutil	0	0	
+${ZPOOL}/ROOT/var/tmp	/var/tmp	zfs	defaults,noatime,zfsutil	0	0
+${ZPOOL}/ROOT/tmp	      /tmp	      zfs	defaults,noatime,zfsutil	0	0	
+${ZPOOL}/ROOT/var/cache	/var/cache	zfs	defaults,noatime,zfsutil	0	0
+proc		/proc		proc		      rw,relatime						0	0
+sysfs		/sys		sysfs		      rw,relatime						0	0
+devtmpfs	/dev		devtmpfs	      rw,relatime,size=106728k,nr_inodes=1526682,mode=755	0	0
+tmpfs		/run		tmpfs		      rw,nosuid,nodev,noexec,relatime,size=32768k,mode=755	0	0
+devpts	/dev/pts	devpts	      rw,relatime,gid=5,mode=620,ptmxmode=000			0	0
+tmpfs		/dev/shm	tmpfs		      rw,nosuid,nodev,noexec,relatime				0	0
+EOF
+
+nano /etc/fstab
+# Create initrd
+
+cd /boot
+/sbin/mkinitrd -k ${KERN} -f zfs -r ${ZPOOL} -m usb-storage:xhci-hcd:ehci-hcd:ehci-pci:xhci-pci:ohci-pci:uhci-hcd:hid:usbhid:i2c-hid:hid_generic:mbcache:ext4:zfs -u -o /boot/initrd-test.gz
+# Install Lilo
+lilo -M ${TARGET} mbr -C /etc/lilo.conf
 # Exit chroot
 exit
 
@@ -142,6 +205,8 @@ done
 
 zfs umount -a
 zpool export -a
+zpool sync ${ZPOOL}
+sync
 
 # Reboot
 reboot
