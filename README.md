@@ -6,6 +6,7 @@ Create a Slackware64-current installer with ZFS support and ZFS package included
 
 
 ```
+export USB_DRIVE=/dev/sdj
 export ZFS_VERSION=0.8.2
 export KERN=5.4.14
 git clone https://github.com/TheRinger/docker-slack64-current-zfs.git
@@ -13,6 +14,7 @@ cd docker-slack64-current-zfs
 docker build -t slack64_zfs:1.0 .
 docker volume create slack64_zfs
 docker run --volume slack64_zfs:/tmp --name slack64_zfs --env ZFS_VER=${ZFS_VERSION} --env KERNEL_VER=${KERN} slack64_zfs:1.0
+sh /files/installer/usbinstaller.sh ${USB_DRIVE}
 ```
 
 Or grab the latest version of the ZFS SBo package and Slackware64-current kernel package in a one liner:
