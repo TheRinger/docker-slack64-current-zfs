@@ -2,7 +2,7 @@
 set -o
 set -x
 
-RSYNC_MIRROR="ftp.nluug.nl::slackware/slackware64-current/"
+RSYNC_MIRROR="10.0.0.33::Slackware/mirrors/slackware/slackware64-current/"
 ZFS_SBO="https://slackbuilds.org/slackbuilds/14.2/system/zfs-on-linux.tar.gz"
 ZFS_URL="https://github.com/zfsonlinux/zfs/releases/download/"
 
@@ -42,7 +42,8 @@ To create a bootable USB-stick, get a stick of at least $(du -hs /tmp/iso | cut 
 and create a single GPT FAT32 partition on it. Then copy the contents of
 /var/lib/docker/volumes/slack64_zfs/_data/iso to the stick.
 
-USB_DEV="/dev/changeMeToTheCorrectDeviceName" # change this
+USB_DEV=$1
+
 sgdisk -Z \${USB_DEV} && \
 sgdisk -og \${USB_DEV} && \
 sgdisk -N 1 -c 1:"SLACK64" -t 1:ef00 -A 1:set:2 \${USB_DEV} && \
