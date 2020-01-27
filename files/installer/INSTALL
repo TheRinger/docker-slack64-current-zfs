@@ -172,19 +172,19 @@ zfs set mountpoint=legacy ${ZPOOL}/ROOT/home
 
 
 cat >> /etc/fstab << EOF
-${ZPOOL}/ROOT	      /	      zfs	defaults,noatime,nofail,noacl,suid,xattr,nomand,zfsutil	0	0
-${ZPOOL}/ROOT/home	/home		zfs	defaults,zfsutil	0	0
-${ZPOOL}/ROOT/opt	      /opt	      zfs	defaults,zfsutil	0	0
-${ZPOOL}/ROOT/var/log	/var/log	zfs	defaults,zfsutil	0	0	
-${ZPOOL}/ROOT/var/tmp	/var/tmp	zfs	defaults,noatime,zfsutil	0	0
-${ZPOOL}/ROOT/tmp	      /tmp	      zfs	defaults,noatime,zfsutil	0	0	
-${ZPOOL}/ROOT/var/cache	/var/cache	zfs	defaults,noatime,zfsutil	0	0
-proc		/proc		proc		      rw,relatime						0	0
-sysfs		/sys		sysfs		      rw,relatime						0	0
-devtmpfs	/dev		devtmpfs	      rw,relatime,size=106728k,nr_inodes=1526682,mode=755	0	0
-tmpfs		/run		tmpfs		      rw,nosuid,nodev,noexec,relatime,size=32768k,mode=755	0	0
-devpts	/dev/pts	devpts	      rw,relatime,gid=5,mode=620,ptmxmode=000			0	0
-tmpfs		/dev/shm	tmpfs		      rw,nosuid,nodev,noexec,relatime				0	0
+${ZPOOL}/ROOT         /       zfs       defaults,noatime,nofail,noacl,suid,xattr,nomand,zfsutil 0      0
+${ZPOOL}/ROOT/home      /home           zfs     defaults,zfsutil        0       0
+${ZPOOL}/ROOT/opt             /opt            zfs       defaults,zfsutil        0       0
+${ZPOOL}/ROOT/var/log   /var/log        zfs     defaults,zfsutil        0       0
+${ZPOOL}/ROOT/var/tmp   /var/tmp        zfs     defaults,noatime,zfsutil        0       0
+${ZPOOL}/ROOT/tmp             /tmp            zfs       defaults,noatime,zfsutil        0       0
+${ZPOOL}/ROOT/var/cache /var/cache      zfs     defaults,noatime,zfsutil        0       0
+proc            /proc           proc                  rw,relatime                                      00
+sysfs           /sys            sysfs                 rw,relatime                                      00
+devtmpfs        /dev            devtmpfs              rw,relatime,size=106728k,nr_inodes=1526682,mode=755       0       0
+tmpfs           /run            tmpfs                 rw,nosuid,nodev,noexec,relatime,size=32768k,mode=755      0       0
+devpts  /dev/pts        devpts        rw,relatime,gid=5,mode=620,ptmxmode=000                   0      0
+tmpfs           /dev/shm        tmpfs                 rw,nosuid,nodev,noexec,relatime                  00
 EOF
 
 nano /etc/fstab
