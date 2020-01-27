@@ -4,26 +4,15 @@ Create a Slackware64-current installer with ZFS support and ZFS package included
 
 ## `git clone` this repo
 
+
 ```
+export ZFS_VERSION=0.8.2
+export KERN=5.4.14
 git clone https://github.com/TheRinger/docker-slack64-current-zfs.git
 cd docker-slack64-current-zfs
-```
-
-## Build the image
-
-This step creates a Slackware64-current Docker image to build the ZFS package in.
-
-```
 docker build -t slack64_zfs:1.0 .
-```
-
-## Run the container with a volume
-
-Now we create a volume to hold the useful files. Then we attach the volume to the container that will do all the work.
-
-```
 docker volume create slack64_zfs
-docker run --volume slack64_zfs:/tmp --name slack64_zfs --env ZFS_VER=0.8.2 --env KERNEL_VER=5.4.7 slack64_zfs:1.0
+docker run --volume slack64_zfs:/tmp --name slack64_zfs --env ZFS_VER=${ZFS_VERSION} --env KERNEL_VER=${KERN} slack64_zfs:1.0
 ```
 
 Or grab the latest version of the ZFS SBo package and Slackware64-current kernel package in a one liner:
