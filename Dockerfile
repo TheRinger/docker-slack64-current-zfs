@@ -1,6 +1,6 @@
 FROM vbatts/slackware:current
 
-ENV RSYNC_MIRROR 10.0.0.33::slackware/slackware64-current/
+ENV RSYNC_MIRROR 10.0.0.33::Slackware/mirrors/slackware/slackware64-current/
 
 # configure slackpkg to be non-interactive
 RUN sed -i -e 's#^BATCH=off#BATCH=on#' \
